@@ -1,0 +1,18 @@
+<Project>
+
+  <PropertyGroup>
+    <CesiumSdkDir Condition="'$(CesiumSdkDir)' == ''">$([MSBuild]::EnsureTrailingSlash('$(MSBuildThisFileDirectory)refs'))</CesiumSdkDir>
+    <GameRefsDir Condition="'$(GameRefsDir)' == '' and '$(CESIUM_GAME_REFS)' != ''">$([MSBuild]::EnsureTrailingSlash('$(CESIUM_GAME_REFS)'))</GameRefsDir>
+    <GameRefsDir Condition="'$(GameRefsDir)' == ''">$([MSBuild]::EnsureTrailingSlash('$(MSBuildThisFileDirectory)refs\game'))</GameRefsDir>
+  </PropertyGroup>
+
+  <Target Name="CharacterNicknameVerifyReferencePaths" BeforeTargets="PrepareForBuild">
+    <ItemGroup>
+      <_CharacterNicknameMissingReference Include="@(Reference)"
+                                          Condition="'%(Reference.HintPath)' != '' and !Exists('%(Reference.HintPath)')" />
+    </ItemGroup>
+    <Error Condition="'@(_CharacterNicknameMissingReference)' != ''"
+           Text="CharacterNicknameMod: 缺少引用的程序集 @(_CharacterNicknameMissingReference->'%(HintPath)', '; ')。请先运行 pwsh -File tools\fetch-refs.ps1 准备 refs\（或用 CESIUM_GAME_REFS 指向已提取的游戏程序集目录）。" />
+  </Target>
+
+</Project>

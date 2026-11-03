@@ -1,0 +1,136 @@
+name: Release
+
+# 推送 tag 时: 准备引用程序集 → 编译 → 跑单测 → 打包 → 创建 GitHub Release。
+# 包内布局为 Mods 目录式: zip 根目录下是 CharacterNicknameMod\ 文件夹,
+# 解压到 AstralParty_ModLoader\mods\ 即得到 mods\CharacterNicknameMod\。
+on:
+  push:
+    tags:
+      - "v*"
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # 编译所需的 CesiumLoader.SDK 与游戏程序集从该 tag 取得
+  CESIUM_LOADER_REF: modloader-2.9.1
+
+jobs:
+  build:
+    name: Build and package
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Prepare reference assemblies
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/fetch-refs.ps1 -CesiumLoaderRef $env:CESIUM_LOADER_REF
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}" -replace '^v', ''
+          } else {
+            $version = "manual-${{ github.run_number }}"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "version=$version"
+
+      - name: Verify sidecar version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -ne "tag") { Write-Host "手动构建, 跳过标签校验"; exit 0 }
+          $sidecar = Get-Content CharacterNicknameMod.json -Raw | ConvertFrom-Json
+          if ($sidecar.version -ne "${{ steps.version.outputs.version }}") {
+            throw "标签版本 ${{ steps.version.outputs.version }} 与 CharacterNicknameMod.json 的 version $($sidecar.version) 不一致"
+          }
+
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet build source/CharacterNicknameMod.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          dotnet test tests/CharacterNicknameMod.Tests/CharacterNicknameMod.Tests.csproj -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage package
+        shell: pwsh
+        run: |
+          $out = "source/bin/Release/netstandard2.0"
+          $stage = "staging/CharacterNicknameMod"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          foreach ($file in @("CharacterNicknameMod.dll", "CharacterNicknameMod.pdb")) {
+            $path = Join-Path $out $file
+            if (-not (Test-Path $path)) { throw "缺少构建产物: $path" }
+            Copy-Item $path $stage -Force
+          }
+          Copy-Item "CharacterNicknameMod.json" $stage -Force
+          if (Test-Path "config.json") {
+            Copy-Item "config.json" $stage -Force
+          }
+
+          $zip = "CharacterNicknameMod-${{ steps.version.outputs.version }}.zip"
+          Compress-Archive -Path staging/CharacterNicknameMod -DestinationPath $zip -CompressionLevel Optimal
+          Copy-Item $zip "CharacterNicknameMod.zip" -Force
+          Get-ChildItem *.zip | Select-Object Name, Length
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-nickname-package
+          path: CharacterNicknameMod*.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: Create release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@v4
+        with:
+          name: character-nickname-package
+          path: artifacts
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 角色昵称 ${{ github.ref_name }}
+          files: artifacts/*.zip
+          fail_on_unmatched_files: true
+          body: |
+            ## 安装
+
+            1. 下载本页附件里的 `CharacterNicknameMod-<版本>.zip`（或固定地址 `CharacterNicknameMod.zip`）。
+            2. 解压到游戏 exe 目录下的 `AstralParty_ModLoader\mods\`，得到 `mods\CharacterNicknameMod\CharacterNicknameMod.dll`、`CharacterNicknameMod.json` 与 `config.json`。
+            3. 启动游戏。已有旧版本时覆盖更新即可。
+
+            需要 CesiumLoader（SDK 不低于 2.8.6）。卸载时删除 `mods\CharacterNicknameMod\` 目录。
+
+            ## 说明
+
+            - 在战斗中将队友的游戏昵称显示为当前所使用角色的名称（例如别人玩茉莉时显示为“茉莉”，而不是其账号昵称或家政机器人称号）。
+            - 支持同步修改左侧玩家头像旁昵称、选择筹码等思考横幅中的昵称。
+            - 可选开启自身匿名开关（`anonymizeSelf`，默认关闭），开启后自己的昵称也会替换为所用角色名。
+            - 配置位于 `mods\CharacterNicknameMod\config.json`，也可在 AstralParty.Toys 的模组配置页修改。
+            - 完整说明与配置项见仓库 [README](${{ github.server_url }}/${{ github.repository }}#readme)。

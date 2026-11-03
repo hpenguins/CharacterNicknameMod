@@ -1,0 +1,1 @@
+{"id":"CharacterNicknameMod","name":"角色昵称","version":"1.0.0","author":"hpenguins","description":"将队友昵称显示为当前游玩角色的名称（例如茉莉），并同步修改头像旁昵称与选筹码等思考横幅。","permissions":193,"sdkVersion":"2.8.6","dependencies":[]}
