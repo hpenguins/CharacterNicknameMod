@@ -20,7 +20,7 @@ namespace CharacterNicknameMod.Tests
             var obj = JObject.Parse(json);
 
             Assert.Equal("CharacterNicknameMod", (string)obj["id"]);
-            Assert.Equal("角色昵称", (string)obj["name"]);
+            Assert.Equal("隐藏队友昵称", (string)obj["name"]);
             Assert.False(string.IsNullOrWhiteSpace((string)obj["version"]));
         }
 

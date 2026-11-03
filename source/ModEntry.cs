@@ -22,7 +22,7 @@ namespace CharacterNicknameMod
         private float _nextErrorLog;
         private string _lastError;
 
-        public override string Name => "角色昵称";
+        public override string Name => "隐藏队友昵称";
         public override string Version => "1.0.0";
         public override string Author => "hpenguins";
         public override string Description => "将队友昵称显示为当前游玩角色的名称（例如茉莉），并同步修改头像旁昵称与选筹码等思考横幅。";
@@ -32,10 +32,10 @@ namespace CharacterNicknameMod
             CharacterNicknameSettings.EnsureDefaults(Config);
             _settings = CharacterNicknameSettings.Read(Config, warning => Log.Warn(warning));
 
-            Log.Info("角色昵称: " + DescribeSettings());
+            Log.Info("隐藏队友昵称: " + DescribeSettings());
             if (!_settings.Enabled)
             {
-                Log.Info("角色昵称处于禁用状态（enabled=false）");
+                Log.Info("隐藏队友昵称处于禁用状态（enabled=false）");
             }
         }
 
@@ -47,11 +47,11 @@ namespace CharacterNicknameMod
             if (wasEnabled && !_settings.Enabled)
             {
                 _manager.Restore();
-                Log.Info("角色昵称已禁用，已恢复原始昵称");
+                Log.Info("隐藏队友昵称已禁用，已恢复原始昵称");
             }
             else
             {
-                Log.Info("角色昵称配置已更新: " + DescribeSettings());
+                Log.Info("隐藏队友昵称配置已更新: " + DescribeSettings());
             }
         }
 
@@ -89,7 +89,7 @@ namespace CharacterNicknameMod
         public override void OnUnload()
         {
             _manager.Restore();
-            Log.Info("角色昵称已卸载，已恢复原始昵称");
+            Log.Info("隐藏队友昵称已卸载，已恢复原始昵称");
         }
 
         private string DescribeSettings()

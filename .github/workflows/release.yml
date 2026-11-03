@@ -115,7 +115,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: 角色昵称 ${{ github.ref_name }}
+          name: 隐藏队友昵称 ${{ github.ref_name }}
           files: artifacts/*.zip
           fail_on_unmatched_files: true
           body: |

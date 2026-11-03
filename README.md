@@ -1,4 +1,4 @@
-# 角色昵称 CharacterNicknameMod
+# 隐藏队友昵称 CharacterNicknameMod
 
 在战斗中将队友（或自己）的游戏昵称显示为当前所使用角色的名称（例如别人玩茉莉时显示为“茉莉”，而不是其账号昵称或家政机器人称号）。
 
